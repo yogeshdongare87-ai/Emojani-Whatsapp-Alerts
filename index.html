@@ -120,18 +120,21 @@
             margin-bottom: 20px;
         }
         .btn-process:hover { background: #15803d; }
-        .btn-bulk-wa {
+        .btn-selected-wa {
             background: #25d366;
             color: white;
             border: none;
-            padding: 10px 20px;
-            font-size: 14px;
+            padding: 12px 20px;
+            font-size: 15px;
             font-weight: bold;
             border-radius: 6px;
             cursor: pointer;
             display: none;
+            width: 100%;
+            margin-bottom: 20px;
+            text-align: center;
         }
-        .btn-bulk-wa:hover { background: #1eb854; }
+        .btn-selected-wa:hover { background: #1eb854; }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -192,10 +195,12 @@
         <div class="stat-card bg-180"><p>१८०+ दिवस (अति-गंभीर)</p><h2 id="st-180">0</h2></div>
     </div>
 
-    <!-- Search / Filter & Fast Send -->
+    <!-- Bulk Action Button -->
+    <button id="btnSelectedWa" class="btn-selected-wa" onclick="sendSelectedMessages()">📲 निवडलेल्या भूकरमापकांना WhatsApp मेसेज पाठवा (Send Selected)</button>
+
+    <!-- Search / Filter -->
     <div class="action-bar">
         <input type="text" id="searchInput" class="search-box" placeholder="भूकरमापक शोधा..." onkeyup="filterTable()">
-        <button id="btnBulk" class="btn-bulk-wa" onclick="sendNextMessage()">📲 एकापाठोपाठ मेसेज पाठवा (Fast Send)</button>
         <span id="surveyorCount" style="font-weight: bold; color: #475569;">एकूण भूकरमापक: 0</span>
     </div>
 
@@ -204,6 +209,7 @@
         <table id="dataTable">
             <thead>
                 <tr>
+                    <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)"> सर्व निवडा</th>
                     <th>भूकरमापक (Surveyor)</th>
                     <th>एकूण केस</th>
                     <th>३०-६० दिवस</th>
@@ -215,16 +221,13 @@
                 </tr>
             </thead>
             <tbody id="tableBody">
-                <tr><td colspan="8" style="color: #94a3b8; padding: 20px;">कृपया दोन्ही Excel फाइल्स अपलोड करून 'डेटा प्रक्रिया करा' वर क्लिक करा.</td></tr>
+                <tr><td colspan="9" style="color: #94a3b8; padding: 20px;">कृपया दोन्ही Excel फाइल्स अपलोड करून 'डेटा प्रक्रिया करा' वर क्लिक करा.</td></tr>
             </tbody>
         </table>
     </div>
 </div>
 
 <script>
-    let pendingWaList = [];
-    let currentWaIndex = 0;
-
     function updateFileName(inputId, targetId) {
         const input = document.getElementById(inputId);
         const target = document.getElementById(targetId);
@@ -250,7 +253,6 @@
             const rawContacts = XLSX.utils.sheet_to_json(sheetC, {header: 1});
 
             const contactsMap = {};
-            
             rawContacts.forEach((row, idx) => {
                 if(idx === 0) return;
                 let name = String(row[0] || '').trim();
@@ -312,8 +314,6 @@
 
                 let tbody = '';
                 let sCount = 0;
-                pendingWaList = [];
-                currentWaIndex = 0;
 
                 for(let surveyor in grouped) {
                     let info = grouped[surveyor];
@@ -321,13 +321,16 @@
 
                     let msg = `नमस्कार ${surveyor} जी,\n\nभूमी अभिलेख विभाग - प्रलंबित प्रकरणे सूचना:\nआपल्याकडे एकूण ${info.total} मोजणी प्रकरणे प्रलंबित आहेत:\n• १८० दिवसांपेक्षा जास्त: ${info.d180} केस\n• ९० ते १८० दिवस: ${info.d90_180} केस\n• ६० ते ९० दिवस: ${info.d60_90} केस\n• ३० ते ६० दिवस: ${info.d30_60} केस\n\nकृपया सदर प्रकरणांचा त्वरित निपटारा करावा.`;
                     let encodedMsg = encodeURIComponent(msg);
-                    let waUrl = `https://web.whatsapp.com/send?phone=+91${mob}&text=${encodedMsg}`;
-
-                    if(mob) {
-                        pendingWaList.push({ surveyor: surveyor, url: waUrl });
-                    }
+                    let waUrl = mob ? `https://web.whatsapp.com/send?phone=+91${mob}&text=${encodedMsg}` : '';
 
                     tbody += `<tr>
+                        <td>`;
+                    if(mob) {
+                        tbody += `<input type="checkbox" class="row-checkbox" value="${waUrl}">`;
+                    } else {
+                        tbody += `-`;
+                    }
+                    tbody += `</td>
                         <td><b>${surveyor}</b></td>
                         <td><b>${info.total}</b></td>
                         <td>${info.d30_60}</td>
@@ -347,11 +350,10 @@
                 }
 
                 document.getElementById('surveyorCount').innerText = "एकूण भूकरमापक: " + sCount;
-                document.getElementById('tableBody').innerHTML = tbody || '<tr><td colspan="8">कोणताही डेटा आढळला नाही.</td></tr>';
-
-                if(pendingWaList.length > 0) {
-                    document.getElementById('btnBulk').style.display = "inline-block";
-                    document.getElementById('btnBulk').innerText = `📲 एकापाठोपाठ मेसेज पाठवा (${pendingWaList.length} भूकरमापक)`;
+                document.getElementById('tableBody').innerHTML = tbody || '<tr><td colspan="9">कोणताही डेटा आढळला नाही.</td></tr>';
+                
+                if(sCount > 0) {
+                    document.getElementById('btnSelectedWa').style.display = "block";
                 }
             };
             rReport.readAsArrayBuffer(reportInput);
@@ -359,25 +361,33 @@
         rContacts.readAsArrayBuffer(contactsInput);
     }
 
-    function sendNextMessage() {
-        if(currentWaIndex < pendingWaList.length) {
-            let item = pendingWaList[currentWaIndex];
-            window.open(item.url, '_blank');
-            currentWaIndex++;
-            
-            if(currentWaIndex < pendingWaList.length) {
-                document.getElementById('btnBulk').innerText = `▶️ पुढील मेसेज पाठवा (${currentWaIndex + 1}/${pendingWaList.length}: ${pendingWaList[currentWaIndex].surveyor})`;
-            } else {
-                document.getElementById('btnBulk').innerText = `✅ सर्व मेसेज पाठवून झाले!`;
-            }
+    function toggleSelectAll(master) {
+        let checkboxes = document.querySelectorAll('.row-checkbox');
+        checkboxes.forEach(cb => cb.checked = master.checked);
+    }
+
+    function sendSelectedMessages() {
+        let checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+        if(checkedBoxes.length === 0) {
+            alert("कृपया कम-से-कम एक भूकरमापक (जिसका मोबाइल नंबर हो) सिलेक्ट करें!");
+            return;
         }
+
+        let urls = Array.from(checkedBoxes).map(cb => cb.value);
+        
+        // Open each selected URL with a small delay so browser doesn't block popups
+        urls.forEach((url, index) => {
+            setTimeout(() => {
+                window.open(url, '_blank');
+            }, index * 800); // 0.8 second gap between each tab
+        });
     }
 
     function filterTable() {
         let input = document.getElementById("searchInput").value.toLowerCase();
         let rows = document.getElementById("tableBody").getElementsByTagName("tr");
         for (let row of rows) {
-            let surveyorName = row.getElementsByTagName("td")[0]?.innerText.toLowerCase() || "";
+            let surveyorName = row.getElementsByTagName("td")[1]?.innerText.toLowerCase() || "";
             row.style.display = surveyorName.includes(input) ? "" : "none";
         }
     }
