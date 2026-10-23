@@ -252,7 +252,7 @@
                 }
             });
 
-            // 2. Read Main Report (Deep Auto Detection)
+            // 2. Read Main Report (Ultra Auto Detection)
             const rReport = new FileReader();
             rReport.onload = function(e2) {
                 const dataR = new Uint8Array(e2.target.result);
@@ -262,7 +262,7 @@
 
                 let sColIdx = -1, dColIdx = -1;
 
-                // Scan all rows to find column headers
+                // Scan all cells to find headers
                 for(let i = 0; i < rawReport.length; i++) {
                     let row = rawReport[i] || [];
                     for(let j = 0; j < row.length; j++) {
@@ -291,18 +291,18 @@
                         surveyor = String(row[sColIdx] || '').trim();
                         days = parseInt(row[dColIdx], 10);
                     } else {
-                        // Fallback: Scan row cells directly
+                        // Intelligent Fallback
                         row.forEach(cell => {
                             let str = String(cell || '').trim();
-                            if(!isNaN(parseInt(str, 10)) && parseInt(str, 10) > 0 && parseInt(str, 10) < 3000) {
-                                if(isNaN(days)) days = parseInt(str, 10);
-                            } else if(str.length > 3 && !/माहिती|अहवाल|तक्ता|प्रलंबित|कालावधी|एकूण|अनु/i.test(str)) {
+                            let val = parseInt(str, 10);
+                            if(!isNaN(val) && val >= 0 && val < 5000 && String(val).length <= 4) {
+                                if(isNaN(days)) days = val;
+                            } else if(str.length > 2 && !/माहिती|अहवाल|तक्ता|प्रलंबित|कालावधी|एकूण|अनु|दिनांक|अ.क्र/i.test(str)) {
                                 if(!surveyor) surveyor = str;
                             }
                         });
                     }
 
-                    // Filter valid data rows only
                     if(!surveyor || surveyor === 'undefined' || isNaN(days) || /भूकरमापक|कर्मचारी|surveyor|दिवस|days|एकूण/i.test(surveyor)) continue;
 
                     totAll++;
@@ -365,7 +365,7 @@
                 }
 
                 document.getElementById('surveyorCount').innerText = "एकूण भूकरमापक: " + sCount;
-                document.getElementById('tableBody').innerHTML = tbody || '<tr><td colspan="8">कोणताही डेटा आढळला नाही.</td></tr>';
+                document.getElementById('tableBody').innerHTML = tbody || '<tr><td colspan="8">कोणताही डेटा आढळला नाही. Excel फाईल तपासा.</td></tr>';
             };
             rReport.readAsArrayBuffer(reportInput);
         };
