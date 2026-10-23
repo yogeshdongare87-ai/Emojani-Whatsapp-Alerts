@@ -252,7 +252,7 @@
                 }
             });
 
-            // 2. Read Main Report (Ultra Auto Detection)
+            // 2. Read Main Report (Deep Auto Detection)
             const rReport = new FileReader();
             rReport.onload = function(e2) {
                 const dataR = new Uint8Array(e2.target.result);
@@ -262,15 +262,15 @@
 
                 let sColIdx = -1, dColIdx = -1;
 
-                // Scan all cells to find headers
+                // Scan all rows to find column headers dynamically
                 for(let i = 0; i < rawReport.length; i++) {
                     let row = rawReport[i] || [];
                     for(let j = 0; j < row.length; j++) {
                         let cell = String(row[j] || '').trim();
-                        if(cell.includes('भूकरमापक') || cell.includes('कर्मचारी') || cell.toLowerCase().includes('surveyor')) {
+                        if(cell.includes('भूकरमापक') || cell.includes('कर्मचारी') || cell.toLowerCase().includes('surveyor') || cell.includes('नाव')) {
                             if(sColIdx === -1) sColIdx = j;
                         }
-                        if(cell.includes('दिवस') || cell.includes('प्रलंबित') || cell.toLowerCase().includes('days')) {
+                        if(cell.includes('दिवस') || cell.includes('प्रलंबित') || cell.toLowerCase().includes('days') || cell.includes('कालावधी')) {
                             if(dColIdx === -1) dColIdx = j;
                         }
                     }
@@ -291,7 +291,6 @@
                         surveyor = String(row[sColIdx] || '').trim();
                         days = parseInt(row[dColIdx], 10);
                     } else {
-                        // Intelligent Fallback
                         row.forEach(cell => {
                             let str = String(cell || '').trim();
                             let val = parseInt(str, 10);
@@ -365,7 +364,7 @@
                 }
 
                 document.getElementById('surveyorCount').innerText = "एकूण भूकरमापक: " + sCount;
-                document.getElementById('tableBody').innerHTML = tbody || '<tr><td colspan="8">कोणताही डेटा आढळला नाही. Excel फाईल तपासा.</td></tr>';
+                document.getElementById('tableBody').innerHTML = tbody || '<tr><td colspan="8">कोणताही डेटा आढळला नाही.</td></tr>';
             };
             rReport.readAsArrayBuffer(reportInput);
         };
