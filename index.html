@@ -148,20 +148,20 @@
 
 <div class="container">
     <div class="header">
-        <h1>🏛️ भूमी अभिलेख - E-Mojani Filtered Pending Report</h1>
+        <h1>🏛️ भूमी अभिलेख - अमरावती (E-Mojani Dashboard)</h1>
         <p>३०, ६०, ९० आणि १८०+ दिवसांच्या प्रलंबित प्रकरणांचे WhatsApp सूचना डैशबोर्ड</p>
     </div>
 
     <!-- Upload Section -->
     <div class="upload-cards">
         <div class="card">
-            <h3>१. प्रलंबित अहवाल अपलोड करा (Main Report)</h3>
+            <h3>१. प्रलंबित अहवाल अपलोड करा (Report_7)</h3>
             <label for="reportFile" class="btn-upload">📂 Select Report Excel</label>
             <input type="file" id="reportFile" class="file-input" accept=".xlsx, .xls" onchange="updateFileName('reportFile', 'reportName')">
             <span id="reportName" class="file-name">फाईल निवडलेली नाही</span>
         </div>
         <div class="card">
-            <h3>२. मोबाईल नंबर मास्टर यादी (Contacts File)</h3>
+            <h3>२. मोबाईल नंबर मास्टर यादी (Contacts)</h3>
             <label for="contactsFile" class="btn-upload">📱 Select Contacts Excel</label>
             <input type="file" id="contactsFile" class="file-input" accept=".xlsx, .xls" onchange="updateFileName('contactsFile', 'contactsName')">
             <span id="contactsName" class="file-name">फाईल निवडलेली नाही</span>
@@ -225,7 +225,7 @@
             return;
         }
 
-        // 1. Read Contacts
+        // 1. Read Contacts (Column A = Name, Column B = Mobile)
         const rContacts = new FileReader();
         rContacts.onload = function(e) {
             const dataC = new Uint8Array(e.target.result);
@@ -235,24 +235,18 @@
 
             const contactsMap = {};
             
-            rawContacts.forEach(row => {
-                if(!row || row.length === 0) return;
-                let name = "", mob = "";
-                row.forEach(cell => {
-                    let str = String(cell || '').trim();
-                    if(!str) return;
-                    if(/[0-9]{10}/.test(str.replace(/[^0-9]/g, ''))) {
-                        mob = str.replace(/[^0-9]/g, '').slice(-10);
-                    } else if(str.length > 2 && !/name|mobile|नाव|नंबर/i.test(str)) {
-                        name = str;
-                    }
-                });
-                if(name && mob) {
+            rawContacts.forEach((row, idx) => {
+                if(idx === 0) return; // Skip header row
+                let name = String(row[0] || '').trim();
+                let mob = String(row[1] || '').trim().replace(/[^0-9]/g, '');
+                if(mob.length > 10) mob = mob.slice(-10);
+
+                if(name && mob.length === 10) {
                     contactsMap[name.toLowerCase()] = mob;
                 }
             });
 
-            // 2. Read Main Report (Deep Auto Detection)
+            // 2. Read Main Report (Column E = Surveyor Index 4, Column I = Days Index 8)
             const rReport = new FileReader();
             rReport.onload = function(e2) {
                 const dataR = new Uint8Array(e2.target.result);
@@ -260,49 +254,19 @@
                 const sheetR = wbR.Sheets[wbR.SheetNames[0]];
                 const rawReport = XLSX.utils.sheet_to_json(sheetR, {header: 1});
 
-                let sColIdx = -1, dColIdx = -1;
-
-                // Scan all rows to find column headers dynamically
-                for(let i = 0; i < rawReport.length; i++) {
-                    let row = rawReport[i] || [];
-                    for(let j = 0; j < row.length; j++) {
-                        let cell = String(row[j] || '').trim();
-                        if(cell.includes('भूकरमापक') || cell.includes('कर्मचारी') || cell.toLowerCase().includes('surveyor') || cell.includes('नाव')) {
-                            if(sColIdx === -1) sColIdx = j;
-                        }
-                        if(cell.includes('दिवस') || cell.includes('प्रलंबित') || cell.toLowerCase().includes('days') || cell.includes('कालावधी')) {
-                            if(dColIdx === -1) dColIdx = j;
-                        }
-                    }
-                    if(sColIdx !== -1 && dColIdx !== -1) break;
-                }
-
                 const grouped = {};
                 let totAll = 0, tot30 = 0, tot60 = 0, tot90 = 0, tot180 = 0;
 
                 for(let i = 0; i < rawReport.length; i++) {
                     let row = rawReport[i] || [];
-                    if(row.length === 0) continue;
+                    if(row.length < 9) continue;
 
-                    let surveyor = "";
-                    let days = NaN;
+                    let surveyor = String(row[4] || '').trim(); // Column E
+                    let daysVal = row[8]; // Column I
+                    let days = parseInt(daysVal, 10);
 
-                    if(sColIdx !== -1 && dColIdx !== -1) {
-                        surveyor = String(row[sColIdx] || '').trim();
-                        days = parseInt(row[dColIdx], 10);
-                    } else {
-                        row.forEach(cell => {
-                            let str = String(cell || '').trim();
-                            let val = parseInt(str, 10);
-                            if(!isNaN(val) && val >= 0 && val < 5000 && String(val).length <= 4) {
-                                if(isNaN(days)) days = val;
-                            } else if(str.length > 2 && !/माहिती|अहवाल|तक्ता|प्रलंबित|कालावधी|एकूण|अनु|दिनांक|अ.क्र/i.test(str)) {
-                                if(!surveyor) surveyor = str;
-                            }
-                        });
-                    }
-
-                    if(!surveyor || surveyor === 'undefined' || isNaN(days) || /भूकरमापक|कर्मचारी|surveyor|दिवस|days|एकूण/i.test(surveyor)) continue;
+                    // Skip header rows or empty surveyor rows
+                    if(!surveyor || surveyor === 'भूकरमापक' || surveyor === 'Surveyor' || isNaN(days)) continue;
 
                     totAll++;
 
@@ -326,14 +290,14 @@
                     }
                 }
 
-                // Update Stats
+                // Update Stats Counter
                 document.getElementById('st-total').innerText = totAll;
                 document.getElementById('st-30').innerText = tot30;
                 document.getElementById('st-60').innerText = tot60;
                 document.getElementById('st-90').innerText = tot90;
                 document.getElementById('st-180').innerText = tot180;
 
-                // Render Table
+                // Render Table Data
                 let tbody = '';
                 let sCount = 0;
 
