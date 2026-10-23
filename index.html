@@ -98,6 +98,7 @@
             align-items: center;
             margin-bottom: 20px;
             gap: 15px;
+            flex-wrap: wrap;
         }
         .search-box {
             padding: 10px 15px;
@@ -119,6 +120,18 @@
             margin-bottom: 20px;
         }
         .btn-process:hover { background: #15803d; }
+        .btn-bulk-wa {
+            background: #25d366;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            display: none;
+        }
+        .btn-bulk-wa:hover { background: #1eb854; }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -179,9 +192,10 @@
         <div class="stat-card bg-180"><p>१८०+ दिवस (अति-गंभीर)</p><h2 id="st-180">0</h2></div>
     </div>
 
-    <!-- Search / Filter -->
+    <!-- Search / Filter & Fast Send -->
     <div class="action-bar">
         <input type="text" id="searchInput" class="search-box" placeholder="भूकरमापक शोधा..." onkeyup="filterTable()">
+        <button id="btnBulk" class="btn-bulk-wa" onclick="sendNextMessage()">📲 एकापाठोपाठ मेसेज पाठवा (Fast Send)</button>
         <span id="surveyorCount" style="font-weight: bold; color: #475569;">एकूण भूकरमापक: 0</span>
     </div>
 
@@ -208,6 +222,9 @@
 </div>
 
 <script>
+    let pendingWaList = [];
+    let currentWaIndex = 0;
+
     function updateFileName(inputId, targetId) {
         const input = document.getElementById(inputId);
         const target = document.getElementById(targetId);
@@ -225,7 +242,6 @@
             return;
         }
 
-        // 1. Read Contacts (Column A = Name, Column B = Mobile)
         const rContacts = new FileReader();
         rContacts.onload = function(e) {
             const dataC = new Uint8Array(e.target.result);
@@ -236,7 +252,7 @@
             const contactsMap = {};
             
             rawContacts.forEach((row, idx) => {
-                if(idx === 0) return; // Skip header row
+                if(idx === 0) return;
                 let name = String(row[0] || '').trim();
                 let mob = String(row[1] || '').trim().replace(/[^0-9]/g, '');
                 if(mob.length > 10) mob = mob.slice(-10);
@@ -246,7 +262,6 @@
                 }
             });
 
-            // 2. Read Main Report (Column E = Surveyor Index 4, Column I = Days Index 8)
             const rReport = new FileReader();
             rReport.onload = function(e2) {
                 const dataR = new Uint8Array(e2.target.result);
@@ -261,11 +276,10 @@
                     let row = rawReport[i] || [];
                     if(row.length < 9) continue;
 
-                    let surveyor = String(row[4] || '').trim(); // Column E
-                    let daysVal = row[8]; // Column I
+                    let surveyor = String(row[4] || '').trim();
+                    let daysVal = row[8];
                     let days = parseInt(daysVal, 10);
 
-                    // Skip header rows or empty surveyor rows
                     if(!surveyor || surveyor === 'भूकरमापक' || surveyor === 'Surveyor' || isNaN(days)) continue;
 
                     totAll++;
@@ -290,16 +304,16 @@
                     }
                 }
 
-                // Update Stats Counter
                 document.getElementById('st-total').innerText = totAll;
                 document.getElementById('st-30').innerText = tot30;
                 document.getElementById('st-60').innerText = tot60;
                 document.getElementById('st-90').innerText = tot90;
                 document.getElementById('st-180').innerText = tot180;
 
-                // Render Table Data
                 let tbody = '';
                 let sCount = 0;
+                pendingWaList = [];
+                currentWaIndex = 0;
 
                 for(let surveyor in grouped) {
                     let info = grouped[surveyor];
@@ -307,6 +321,11 @@
 
                     let msg = `नमस्कार ${surveyor} जी,\n\nभूमी अभिलेख विभाग - प्रलंबित प्रकरणे सूचना:\nआपल्याकडे एकूण ${info.total} मोजणी प्रकरणे प्रलंबित आहेत:\n• १८० दिवसांपेक्षा जास्त: ${info.d180} केस\n• ९० ते १८० दिवस: ${info.d90_180} केस\n• ६० ते ९० दिवस: ${info.d60_90} केस\n• ३० ते ६० दिवस: ${info.d30_60} केस\n\nकृपया सदर प्रकरणांचा त्वरित निपटारा करावा.`;
                     let encodedMsg = encodeURIComponent(msg);
+                    let waUrl = `https://web.whatsapp.com/send?phone=+91${mob}&text=${encodedMsg}`;
+
+                    if(mob) {
+                        pendingWaList.push({ surveyor: surveyor, url: waUrl });
+                    }
 
                     tbody += `<tr>
                         <td><b>${surveyor}</b></td>
@@ -319,7 +338,7 @@
                         <td>`;
 
                     if(mob) {
-                        tbody += `<a class="btn-wa" href="https://web.whatsapp.com/send?phone=+91${mob}&text=${encodedMsg}" target="_blank">💬 WhatsApp</a>`;
+                        tbody += `<a class="btn-wa" href="${waUrl}" target="_blank">💬 WhatsApp</a>`;
                     } else {
                         tbody += `-`;
                     }
@@ -329,10 +348,29 @@
 
                 document.getElementById('surveyorCount').innerText = "एकूण भूकरमापक: " + sCount;
                 document.getElementById('tableBody').innerHTML = tbody || '<tr><td colspan="8">कोणताही डेटा आढळला नाही.</td></tr>';
+
+                if(pendingWaList.length > 0) {
+                    document.getElementById('btnBulk').style.display = "inline-block";
+                    document.getElementById('btnBulk').innerText = `📲 एकापाठोपाठ मेसेज पाठवा (${pendingWaList.length} भूकरमापक)`;
+                }
             };
             rReport.readAsArrayBuffer(reportInput);
         };
         rContacts.readAsArrayBuffer(contactsInput);
+    }
+
+    function sendNextMessage() {
+        if(currentWaIndex < pendingWaList.length) {
+            let item = pendingWaList[currentWaIndex];
+            window.open(item.url, '_blank');
+            currentWaIndex++;
+            
+            if(currentWaIndex < pendingWaList.length) {
+                document.getElementById('btnBulk').innerText = `▶️ पुढील मेसेज पाठवा (${currentWaIndex + 1}/${pendingWaList.length}: ${pendingWaList[currentWaIndex].surveyor})`;
+            } else {
+                document.getElementById('btnBulk').innerText = `✅ सर्व मेसेज पाठवून झाले!`;
+            }
+        }
     }
 
     function filterTable() {
