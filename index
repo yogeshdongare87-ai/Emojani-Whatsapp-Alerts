@@ -224,7 +224,6 @@
             alert("कृपया दोन्ही Excel फाइल्स (Report आणि Contacts) सेलेक्ट करा!");
             return;
         }
-
         // 1. Read Contacts
         const rContacts = new FileReader();
         rContacts.onload = function(e) {
