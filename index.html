@@ -196,7 +196,7 @@
     <!-- Search / Filter & Send Action -->
     <div class="action-bar">
         <input type="text" id="searchInput" class="search-box" placeholder="भूकरमापक शोधा..." onkeyup="filterTable()">
-        <button id="btnSelectedWa" class="btn-selected-wa" onclick="sendSelectedMessages()">📲 निवडलेल्यांना WhatsApp पाठवा</button>
+        <button id="btnSelectedWa" class="btn-selected-wa" onclick="startSendingSelected()">📲 निवडलेल्यांना WhatsApp पाठवा (14 सेकंद अंतर)</button>
         <span id="surveyorCount" style="font-weight: bold; color: #475569;">एकूण भूकरमापक: 0</span>
     </div>
 
@@ -315,7 +315,7 @@
                     let info = grouped[surveyor];
                     let mob = contactsMap[surveyor.toLowerCase()] || '';
 
-                    let msg = `नमस्कार ${surveyor} जी,\n\nभूमी अभिलेख विभाग - प्रलंबित प्रकरणे सूचना:\nआपल्याकडे एकूण ${info.total} मोजणी प्रकरणे प्रलंबित आहेत:\n• १८० दिवसांपेक्षा जास्त: ${info.d180} केस\n• ९० ते १८० दिवस: ${info.d90_180} केस\n• ६० ते ९० दिवस: ${info.d60_90} ...\n\nकृपया सदर प्रकरणांचा त्वरित निपटारा करावा.`;
+                    let msg = `नमस्कार ${surveyor} जी,\n\nभूमी अभिलेख विभाग - प्रलंबित प्रकरणे सूचना:\nआपल्याकडे एकूण ${info.total} मोजणी प्रकरणे प्रलंबित आहेत:\n• १८० दिवसांपेक्षा जास्त: ${info.d180} केस\n• ९० ते १८० दिवस: ${info.d90_180} केस\n• ६० ते ९० दिवस: ${info.d60_90} केस\n• ३० ते ६० दिवस: ${info.d30_60} केस\n\nकृपया सदर प्रकरणांचा त्वरित निपटारा करावा.`;
                     let encodedMsg = encodeURIComponent(msg);
                     let waUrl = mob ? `https://web.whatsapp.com/send?phone=+91${mob}&text=${encodedMsg}` : '';
 
@@ -350,7 +350,7 @@
         checkboxes.forEach(cb => cb.checked = master.checked);
     }
 
-    function sendSelectedMessages() {
+    function startSendingSelected() {
         let checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
         if(checkedBoxes.length === 0) {
             alert("कृपया कमीत कमी एका भूकरमापकाला सिलेक्ट करा!");
@@ -358,11 +358,37 @@
         }
 
         let urls = Array.from(checkedBoxes).map(cb => cb.value);
-        urls.forEach((url, index) => {
-            setTimeout(() => {
-                window.open(url, '_blank');
-            }, index * 800);
-        });
+        let btn = document.getElementById('btnSelectedWa');
+        btn.disabled = true;
+
+        let index = 0;
+        
+        function sendNext() {
+            if (index < urls.length) {
+                window.open(urls[index], '_blank');
+                index++;
+                
+                if (index < urls.length) {
+                    let countdown = 14;
+                    btn.innerText = `⏳ पाठवले (${index}/${urls.length}) - पुढचा मेसेज ${countdown}s मध्ये...`;
+                    
+                    let timer = setInterval(() => {
+                        countdown--;
+                        if (countdown > 0) {
+                            btn.innerText = `⏳ पाठवले (${index}/${urls.length}) - पुढचा मेसेज ${countdown}s मध्ये...`;
+                        } else {
+                            clearInterval(timer);
+                            sendNext();
+                        }
+                    }, 1000);
+                } else {
+                    btn.innerText = `✅ सर्व (${urls.length}) मेसेज पाठवून झाले!`;
+                    btn.disabled = false;
+                }
+            }
+        }
+
+        sendNext();
     }
 
     function filterTable() {
