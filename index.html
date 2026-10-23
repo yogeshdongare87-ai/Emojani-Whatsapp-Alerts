@@ -124,15 +124,12 @@
             background: #25d366;
             color: white;
             border: none;
-            padding: 12px 20px;
-            font-size: 15px;
+            padding: 10px 20px;
+            font-size: 14px;
             font-weight: bold;
             border-radius: 6px;
             cursor: pointer;
             display: none;
-            width: 100%;
-            margin-bottom: 20px;
-            text-align: center;
         }
         .btn-selected-wa:hover { background: #1eb854; }
         table {
@@ -158,6 +155,7 @@
         }
         .btn-wa:hover { background: #16a34a; }
         .text-danger { color: var(--danger); font-weight: bold; }
+        input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -195,12 +193,10 @@
         <div class="stat-card bg-180"><p>१८०+ दिवस (अति-गंभीर)</p><h2 id="st-180">0</h2></div>
     </div>
 
-    <!-- Bulk Action Button -->
-    <button id="btnSelectedWa" class="btn-selected-wa" onclick="sendSelectedMessages()">📲 निवडलेल्या भूकरमापकांना WhatsApp मेसेज पाठवा (Send Selected)</button>
-
-    <!-- Search / Filter -->
+    <!-- Search / Filter & Send Action -->
     <div class="action-bar">
         <input type="text" id="searchInput" class="search-box" placeholder="भूकरमापक शोधा..." onkeyup="filterTable()">
+        <button id="btnSelectedWa" class="btn-selected-wa" onclick="sendSelectedMessages()">📲 निवडलेल्यांना WhatsApp पाठवा</button>
         <span id="surveyorCount" style="font-weight: bold; color: #475569;">एकूण भूकरमापक: 0</span>
     </div>
 
@@ -209,7 +205,7 @@
         <table id="dataTable">
             <thead>
                 <tr>
-                    <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)"> सर्व निवडा</th>
+                    <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)"></th>
                     <th>भूकरमापक (Surveyor)</th>
                     <th>एकूण केस</th>
                     <th>३०-६० दिवस</th>
@@ -282,116 +278,4 @@
                     let daysVal = row[8];
                     let days = parseInt(daysVal, 10);
 
-                    if(!surveyor || surveyor === 'भूकरमापक' || surveyor === 'Surveyor' || isNaN(days)) continue;
-
-                    totAll++;
-
-                    if(!grouped[surveyor]) {
-                        grouped[surveyor] = { total: 0, d30_60: 0, d60_90: 0, d90_180: 0, d180: 0 };
-                    }
-                    grouped[surveyor].total++;
-
-                    if(days > 180) {
-                        grouped[surveyor].d180++;
-                        tot180++;
-                    } else if(days > 90) {
-                        grouped[surveyor].d90_180++;
-                        tot90++;
-                    } else if(days >= 60 && days <= 90) {
-                        grouped[surveyor].d60_90++;
-                        tot60++;
-                    } else if(days >= 30 && days < 60) {
-                        grouped[surveyor].d30_60++;
-                        tot30++;
-                    }
-                }
-
-                document.getElementById('st-total').innerText = totAll;
-                document.getElementById('st-30').innerText = tot30;
-                document.getElementById('st-60').innerText = tot60;
-                document.getElementById('st-90').innerText = tot90;
-                document.getElementById('st-180').innerText = tot180;
-
-                let tbody = '';
-                let sCount = 0;
-
-                for(let surveyor in grouped) {
-                    let info = grouped[surveyor];
-                    let mob = contactsMap[surveyor.toLowerCase()] || '';
-
-                    let msg = `नमस्कार ${surveyor} जी,\n\nभूमी अभिलेख विभाग - प्रलंबित प्रकरणे सूचना:\nआपल्याकडे एकूण ${info.total} मोजणी प्रकरणे प्रलंबित आहेत:\n• १८० दिवसांपेक्षा जास्त: ${info.d180} केस\n• ९० ते १८० दिवस: ${info.d90_180} केस\n• ६० ते ९० दिवस: ${info.d60_90} केस\n• ३० ते ६० दिवस: ${info.d30_60} केस\n\nकृपया सदर प्रकरणांचा त्वरित निपटारा करावा.`;
-                    let encodedMsg = encodeURIComponent(msg);
-                    let waUrl = mob ? `https://web.whatsapp.com/send?phone=+91${mob}&text=${encodedMsg}` : '';
-
-                    tbody += `<tr>
-                        <td>`;
-                    if(mob) {
-                        tbody += `<input type="checkbox" class="row-checkbox" value="${waUrl}">`;
-                    } else {
-                        tbody += `-`;
-                    }
-                    tbody += `</td>
-                        <td><b>${surveyor}</b></td>
-                        <td><b>${info.total}</b></td>
-                        <td>${info.d30_60}</td>
-                        <td>${info.d60_90}</td>
-                        <td>${info.d90_180}</td>
-                        <td class="text-danger">${info.d180}</td>
-                        <td>${mob ? mob : '<span class="text-danger">नंबर नाही</span>'}</td>
-                        <td>`;
-
-                    if(mob) {
-                        tbody += `<a class="btn-wa" href="${waUrl}" target="_blank">💬 WhatsApp</a>`;
-                    } else {
-                        tbody += `-`;
-                    }
-                    tbody += `</td></tr>`;
-                    sCount++;
-                }
-
-                document.getElementById('surveyorCount').innerText = "एकूण भूकरमापक: " + sCount;
-                document.getElementById('tableBody').innerHTML = tbody || '<tr><td colspan="9">कोणताही डेटा आढळला नाही.</td></tr>';
-                
-                if(sCount > 0) {
-                    document.getElementById('btnSelectedWa').style.display = "block";
-                }
-            };
-            rReport.readAsArrayBuffer(reportInput);
-        };
-        rContacts.readAsArrayBuffer(contactsInput);
-    }
-
-    function toggleSelectAll(master) {
-        let checkboxes = document.querySelectorAll('.row-checkbox');
-        checkboxes.forEach(cb => cb.checked = master.checked);
-    }
-
-    function sendSelectedMessages() {
-        let checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
-        if(checkedBoxes.length === 0) {
-            alert("कृपया कम-से-कम एक भूकरमापक (जिसका मोबाइल नंबर हो) सिलेक्ट करें!");
-            return;
-        }
-
-        let urls = Array.from(checkedBoxes).map(cb => cb.value);
-        
-        // Open each selected URL with a small delay so browser doesn't block popups
-        urls.forEach((url, index) => {
-            setTimeout(() => {
-                window.open(url, '_blank');
-            }, index * 800); // 0.8 second gap between each tab
-        });
-    }
-
-    function filterTable() {
-        let input = document.getElementById("searchInput").value.toLowerCase();
-        let rows = document.getElementById("tableBody").getElementsByTagName("tr");
-        for (let row of rows) {
-            let surveyorName = row.getElementsByTagName("td")[1]?.innerText.toLowerCase() || "";
-            row.style.display = surveyorName.includes(input) ? "" : "none";
-        }
-    }
-</script>
-
-</body>
-</html>
+                    if(!surveyor
