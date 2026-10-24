@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E-Mojani Filtered Pending Report</title>
+    <title>E-Mojani Multi-Role Smart Dashboard</title>
     <!-- SheetJS Excel Library -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
@@ -24,7 +24,7 @@
             color: var(--dark);
         }
         .container {
-            max-width: 1200px;
+            max-width: 1250px;
             margin: 0 auto;
             background: white;
             padding: 25px;
@@ -155,6 +155,16 @@
         }
         .btn-wa:hover { background: #16a34a; }
         .text-danger { color: var(--danger); font-weight: bold; }
+        .role-badge {
+            background: #e0f2fe;
+            color: #0369a1;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            display: block;
+            margin-top: 3px;
+        }
         input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
     </style>
 </head>
@@ -162,8 +172,8 @@
 
 <div class="container">
     <div class="header">
-        <h1>🏛️ भूमी अभिलेख - अमरावती (E-Mojani Dashboard)</h1>
-        <p>३०, ६०, ९० आणि १८०+ दिवसांच्या प्रलंबित प्रकरणांचे WhatsApp सूचना डैशबोर्ड</p>
+        <h1>🏛️ भूमी अभिलेख - अमरावती (E-Mojani Smart Dashboard)</h1>
+        <p>भूकरमापक, छाननी लिपिक, शिरस्तेदार व उपभूमी अभिलेख अधिकारी प्रलंबित प्रकरणे</p>
     </div>
 
     <!-- Upload Section -->
@@ -193,11 +203,11 @@
         <div class="stat-card bg-180"><p>१८०+ दिवस (अति-गंभीर)</p><h2 id="st-180">0</h2></div>
     </div>
 
-    <!-- Search / Filter & Send Action -->
+    <!-- Action Bar -->
     <div class="action-bar">
-        <input type="text" id="searchInput" class="search-box" placeholder="भूकरमापक शोधा..." onkeyup="filterTable()">
+        <input type="text" id="searchInput" class="search-box" placeholder="अधिकारी / भूकरमापक शोधा..." onkeyup="filterTable()">
         <button id="btnSelectedWa" class="btn-selected-wa" onclick="startSendingSelected()">📲 निवडलेल्यांना WhatsApp पाठवा (14 सेकंद अंतर)</button>
-        <span id="surveyorCount" style="font-weight: bold; color: #475569;">एकूण भूकरमापक: 0</span>
+        <span id="surveyorCount" style="font-weight: bold; color: #475569;">एकूण अधिकारी/कर्मचारी: 0</span>
     </div>
 
     <!-- Table Output -->
@@ -206,7 +216,8 @@
             <thead>
                 <tr>
                     <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)"></th>
-                    <th>भूकरमापक (Surveyor)</th>
+                    <th>अधिकारी / भूकरमापक (Official)</th>
+                    <th>तालुका (Taluka)</th>
                     <th>एकूण केस</th>
                     <th>३०-६० दिवस</th>
                     <th>६०-९० दिवस</th>
@@ -217,7 +228,7 @@
                 </tr>
             </thead>
             <tbody id="tableBody">
-                <tr><td colspan="9" style="color: #94a3b8; padding: 20px;">कृपया दोन्ही Excel फाइल्स अपलोड करून 'डेटा प्रक्रिया करा' वर क्लिक करा.</td></tr>
+                <tr><td colspan="10" style="color: #94a3b8; padding: 20px;">कृपया दोन्ही Excel फाइल्स अपलोड करून 'डेटा प्रक्रिया करा' वर क्लिक करा.</td></tr>
             </tbody>
         </table>
     </div>
@@ -241,6 +252,7 @@
             return;
         }
 
+        // 1. Read Contacts Master File
         const rContacts = new FileReader();
         rContacts.onload = function(e) {
             const dataC = new Uint8Array(e.target.result);
@@ -248,18 +260,37 @@
             const sheetC = wbC.Sheets[wbC.SheetNames[0]];
             const rawContacts = XLSX.utils.sheet_to_json(sheetC, {header: 1});
 
-            const contactsMap = {};
-            rawContacts.forEach((row, idx) => {
-                if(idx === 0) return;
-                let name = String(row[0] || '').trim();
-                let mob = String(row[1] || '').trim().replace(/[^0-9]/g, '');
-                if(mob.length > 10) mob = mob.slice(-10);
+            const contactsByName = {};
+            const contactsByTalukaStatus = {};
 
-                if(name && mob.length === 10) {
-                    contactsMap[name.toLowerCase()] = mob;
+            rawContacts.forEach((row, idx) => {
+                if(idx === 0 || !row || row.length === 0) return;
+
+                let nameCol = String(row[0] || '').trim(); // Col A
+                let mobVal = "";
+                
+                // Extract mobile number from row
+                row.forEach(cell => {
+                    let str = String(cell || '').replace(/[^0-9]/g, '');
+                    if(str.length >= 10) mobVal = str.slice(-10);
+                });
+
+                let talukaCol = String(row[2] || '').trim(); // Col C
+                let statusCol = String(row[3] || '').trim(); // Col D
+
+                // Map Surveyor by Name
+                if(nameCol && mobVal) {
+                    contactsByName[nameCol.toLowerCase()] = { name: nameCol, mob: mobVal };
+                }
+
+                // Map Official by Taluka + Status Combination
+                if(talukaCol && statusCol && mobVal) {
+                    let comboKey = (talukaCol + "___" + statusCol).toLowerCase();
+                    contactsByTalukaStatus[comboKey] = { name: nameCol || statusCol, mob: mobVal };
                 }
             });
 
+            // 2. Read Main Pending Report_7 File
             const rReport = new FileReader();
             rReport.onload = function(e2) {
                 const dataR = new Uint8Array(e2.target.result);
@@ -274,30 +305,82 @@
                     let row = rawReport[i] || [];
                     if(row.length < 9) continue;
 
-                    let surveyor = String(row[4] || '').trim();
-                    let daysVal = row[8];
+                    let taluka = String(row[2] || '').trim(); // Col C
+                    let surveyor = String(row[4] || '').trim(); // Col E
+                    let status = String(row[5] || '').trim(); // Col F
+                    let daysVal = row[8]; // Col I
                     let days = parseInt(daysVal, 10);
 
-                    if(!surveyor || surveyor === 'भूकरमापक' || surveyor === 'Surveyor' || isNaN(days)) continue;
+                    if(!status || status === 'स्थिती' || isNaN(days)) continue;
+
+                    let assignedName = "";
+                    let roleTag = "";
+                    let targetMob = "";
+
+                    // Determine Role & Assignee
+                    if(status.includes("मोजणीची माहिती")) {
+                        roleTag = "भूकरमापक";
+                        assignedName = surveyor;
+                        if(contactsByName[surveyor.toLowerCase()]) {
+                            targetMob = contactsByName[surveyor.toLowerCase()].mob;
+                        }
+                    } else {
+                        // Non-surveyor official lookup
+                        let comboKey = (taluka + "___" + status).toLowerCase();
+                        let matchedOfficial = contactsByTalukaStatus[comboKey];
+
+                        if(status.includes("छाननी लिपिक")) {
+                            roleTag = "छाननी लिपिक";
+                        } else if(status.includes("शिरस्तेदार") || status.includes("मुख्यालय")) {
+                            roleTag = "शिरस्तेदार";
+                        } else if(status.includes("ऊप.अ") || status.includes("मान्यतेवर") || status.includes("भू. अ")) {
+                            roleTag = "उपभूमी अभिलेख अधिकारी";
+                        } else {
+                            roleTag = "अधिकारी";
+                        }
+
+                        if(matchedOfficial) {
+                            assignedName = matchedOfficial.name;
+                            targetMob = matchedOfficial.mob;
+                        } else {
+                            assignedName = `${roleTag} (${taluka})`;
+                            targetMob = "";
+                        }
+                    }
+
+                    if(!assignedName || assignedName === 'undefined') continue;
 
                     totAll++;
 
-                    if(!grouped[surveyor]) {
-                        grouped[surveyor] = { total: 0, d30_60: 0, d60_90: 0, d90_180: 0, d180: 0 };
+                    let groupKey = assignedName + "___" + taluka + "___" + roleTag;
+
+                    if(!grouped[groupKey]) {
+                        grouped[groupKey] = {
+                            name: assignedName,
+                            taluka: taluka,
+                            role: roleTag,
+                            mob: targetMob,
+                            total: 0, d30_60: 0, d60_90: 0, d90_180: 0, d180: 0
+                        };
                     }
-                    grouped[surveyor].total++;
+                    
+                    if(!grouped[groupKey].mob && targetMob) {
+                        grouped[groupKey].mob = targetMob;
+                    }
+
+                    grouped[groupKey].total++;
 
                     if(days > 180) {
-                        grouped[surveyor].d180++;
+                        grouped[groupKey].d180++;
                         tot180++;
                     } else if(days > 90) {
-                        grouped[surveyor].d90_180++;
+                        grouped[groupKey].d90_180++;
                         tot90++;
                     } else if(days >= 60 && days <= 90) {
-                        grouped[surveyor].d60_90++;
+                        grouped[groupKey].d60_90++;
                         tot60++;
                     } else if(days >= 30 && days < 60) {
-                        grouped[surveyor].d30_60++;
+                        grouped[groupKey].d30_60++;
                         tot30++;
                     }
                 }
@@ -311,19 +394,18 @@
                 let tbody = '';
                 let sCount = 0;
 
-                for(let surveyor in grouped) {
-                    let info = grouped[surveyor];
-                    let mob = contactsMap[surveyor.toLowerCase()] || '';
+                for(let key in grouped) {
+                    let info = grouped[key];
+                    let mob = info.mob || '';
 
-                    let msg = `नमस्कार ${surveyor} जी,\n\nभूमी अभिलेख विभाग - प्रलंबित प्रकरणे सूचना:\nआपल्याकडे एकूण ${info.total} मोजणी प्रकरणे प्रलंबित आहेत:\n• १८० दिवसांपेक्षा जास्त: ${info.d180} केस\n• ९० ते १८० दिवस: ${info.d90_180} केस\n• ६० ते ९० दिवस: ${info.d60_90} केस\n• ३० ते ६० दिवस: ${info.d30_60} केस\n\nकृपया सदर प्रकरणांचा त्वरित निपटारा करावा अन्यथा आपले विरुद्ध महाराष्ट्र नागरी सेवा,  (शिस्त व  अपील) नियम 1979 चे नियम नुसार कारवाई करण्यात येईल याची नोंद घ्यावी. 
-     हुकुमावरून 
-मा. जिल्हा अधीक्षक भूमिअभिलेख, अमरावती.`;
+                    let msg = `नमस्कार ${info.name} जी,\n\nभूमी अभिलेख विभाग - प्रलंबित प्रकरणे सूचना:\nआपल्याकडे (${info.role} - ${info.taluka}) एकूी ${info.total} प्रकरणे प्रलंबित आहेत:\n• १८० दिवसांपेक्षा जास्त: ${info.d180} केस\n• ९० ते १८० दिवस: ${info.d90_180} केस\n• ६० ते ९० दिवस: ${info.d60_90} केस\n• ३० ते ६० दिवस: ${info.d30_60} केस\n\nकृपया सदर प्रकरणांचा त्वरित निपटारा करावा.`;
                     let encodedMsg = encodeURIComponent(msg);
                     let waUrl = mob ? `https://web.whatsapp.com/send?phone=+91${mob}&text=${encodedMsg}` : '';
 
                     tbody += `<tr>
                         <td>${mob ? `<input type="checkbox" class="row-checkbox" value="${waUrl}">` : '-'}</td>
-                        <td><b>${surveyor}</b></td>
+                        <td><b>${info.name}</b> <span class="role-badge">${info.role}</span></td>
+                        <td>${info.taluka}</td>
                         <td><b>${info.total}</b></td>
                         <td>${info.d30_60}</td>
                         <td>${info.d60_90}</td>
@@ -335,8 +417,8 @@
                     sCount++;
                 }
 
-                document.getElementById('surveyorCount').innerText = "एकूण भूकरमापक: " + sCount;
-                document.getElementById('tableBody').innerHTML = tbody || '<tr><td colspan="9">कोणताही डेटा आढळला नाही.</td></tr>';
+                document.getElementById('surveyorCount').innerText = "एकूण अधिकारी/कर्मचारी: " + sCount;
+                document.getElementById('tableBody').innerHTML = tbody || '<tr><td colspan="10">कोणताही डेटा आढळला नाही.</td></tr>';
                 
                 if(sCount > 0) {
                     document.getElementById('btnSelectedWa').style.display = "inline-block";
@@ -355,7 +437,7 @@
     function startSendingSelected() {
         let checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
         if(checkedBoxes.length === 0) {
-            alert("कृपया कमीत कमी एका भूकरमापकाला सिलेक्ट करा!");
+            alert("कृपया कमीत कमी एका अधिकाऱ्याला सिलेक्ट करा!");
             return;
         }
 
@@ -397,8 +479,9 @@
         let input = document.getElementById("searchInput").value.toLowerCase();
         let rows = document.getElementById("tableBody").getElementsByTagName("tr");
         for (let row of rows) {
-            let surveyorName = row.getElementsByTagName("td")[1]?.innerText.toLowerCase() || "";
-            row.style.display = surveyorName.includes(input) ? "" : "none";
+            let officialName = row.getElementsByTagName("td")[1]?.innerText.toLowerCase() || "";
+            let talukaName = row.getElementsByTagName("td")[2]?.innerText.toLowerCase() || "";
+            row.style.display = (officialName.includes(input) || talukaName.includes(input)) ? "" : "none";
         }
     }
 </script>
