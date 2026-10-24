@@ -235,6 +235,14 @@
 </div>
 
 <script>
+    // Function to convert English numbers to Marathi Devanagari numbers
+    function toMarathiNumber(num) {
+        const marathiDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+        return String(num).replace(/[0-9]/g, function(w) {
+            return marathiDigits[+w];
+        });
+    }
+
     function updateFileName(inputId, targetId) {
         const input = document.getElementById(inputId);
         const target = document.getElementById(targetId);
@@ -252,7 +260,6 @@
             return;
         }
 
-        // 1. Read Contacts Master File
         const rContacts = new FileReader();
         rContacts.onload = function(e) {
             const dataC = new Uint8Array(e.target.result);
@@ -266,31 +273,27 @@
             rawContacts.forEach((row, idx) => {
                 if(idx === 0 || !row || row.length === 0) return;
 
-                let nameCol = String(row[0] || '').trim(); // Col A
+                let nameCol = String(row[0] || '').trim();
                 let mobVal = "";
                 
-                // Extract mobile number from row
                 row.forEach(cell => {
                     let str = String(cell || '').replace(/[^0-9]/g, '');
                     if(str.length >= 10) mobVal = str.slice(-10);
                 });
 
-                let talukaCol = String(row[2] || '').trim(); // Col C
-                let statusCol = String(row[3] || '').trim(); // Col D
+                let talukaCol = String(row[2] || '').trim();
+                let statusCol = String(row[3] || '').trim();
 
-                // Map Surveyor by Name
                 if(nameCol && mobVal) {
                     contactsByName[nameCol.toLowerCase()] = { name: nameCol, mob: mobVal };
                 }
 
-                // Map Official by Taluka + Status Combination
                 if(talukaCol && statusCol && mobVal) {
                     let comboKey = (talukaCol + "___" + statusCol).toLowerCase();
                     contactsByTalukaStatus[comboKey] = { name: nameCol || statusCol, mob: mobVal };
                 }
             });
 
-            // 2. Read Main Pending Report_7 File
             const rReport = new FileReader();
             rReport.onload = function(e2) {
                 const dataR = new Uint8Array(e2.target.result);
@@ -305,10 +308,10 @@
                     let row = rawReport[i] || [];
                     if(row.length < 9) continue;
 
-                    let taluka = String(row[2] || '').trim(); // Col C
-                    let surveyor = String(row[4] || '').trim(); // Col E
-                    let status = String(row[5] || '').trim(); // Col F
-                    let daysVal = row[8]; // Col I
+                    let taluka = String(row[2] || '').trim();
+                    let surveyor = String(row[4] || '').trim();
+                    let status = String(row[5] || '').trim();
+                    let daysVal = row[8];
                     let days = parseInt(daysVal, 10);
 
                     if(!status || status === 'स्थिती' || isNaN(days)) continue;
@@ -317,7 +320,6 @@
                     let roleTag = "";
                     let targetMob = "";
 
-                    // Determine Role & Assignee
                     if(status.includes("मोजणीची माहिती")) {
                         roleTag = "भूकरमापक";
                         assignedName = surveyor;
@@ -325,7 +327,6 @@
                             targetMob = contactsByName[surveyor.toLowerCase()].mob;
                         }
                     } else {
-                        // Non-surveyor official lookup
                         let comboKey = (taluka + "___" + status).toLowerCase();
                         let matchedOfficial = contactsByTalukaStatus[comboKey];
 
@@ -385,11 +386,12 @@
                     }
                 }
 
-                document.getElementById('st-total').innerText = totAll;
-                document.getElementById('st-30').innerText = tot30;
-                document.getElementById('st-60').innerText = tot60;
-                document.getElementById('st-90').innerText = tot90;
-                document.getElementById('st-180').innerText = tot180;
+                // Update Cards Stats
+                document.getElementById('st-total').innerText = toMarathiNumber(totAll);
+                document.getElementById('st-30').innerText = toMarathiNumber(tot30);
+                document.getElementById('st-60').innerText = toMarathiNumber(tot60);
+                document.getElementById('st-90').innerText = toMarathiNumber(tot90);
+                document.getElementById('st-180').innerText = toMarathiNumber(tot180);
 
                 let tbody = '';
                 let sCount = 0;
@@ -398,7 +400,8 @@
                     let info = grouped[key];
                     let mob = info.mob || '';
 
-                    let msg = `नमस्कार ${info.name} जी,\n\nभूमी अभिलेख विभाग - प्रलंबित प्रकरणे सूचना:\nआपल्याकडे (${info.role} - ${info.taluka}) एकूी ${info.total} प्रकरणे प्रलंबित आहेत:\n• १८० दिवसांपेक्षा जास्त: ${info.d180} केस\n• ९० ते १८० दिवस: ${info.d90_180} केस\n• ६० ते ९० दिवस: ${info.d60_90} केस\n• ३० ते ६० दिवस: ${info.d30_60} केस\n\nकृपया सदर प्रकरणांचा त्वरित निपटारा करावा.`;
+                    // Message text with 100% Marathi numbers
+                    let msg = `नमस्कार ${info.name} जी,\n\nभूमी अभिलेख विभाग - प्रलंबित प्रकरणे सूचना:\nआपल्याकडे (${info.role} - ${info.taluka}) एकूण ${toMarathiNumber(info.total)} प्रकरणे प्रलंबित आहेत:\n• १८० दिवसांपेक्षा जास्त: ${toMarathiNumber(info.d180)} केस\n• ९० ते १८० दिवस: ${toMarathiNumber(info.d90_180)} केस\n• ६० ते ९० दिवस: ${toMarathiNumber(info.d60_90)} केस\n• ३० ते ६० दिवस: ${toMarathiNumber(info.d30_60)} केस\n\nकृपया सदर प्रकरणांचा त्वरित निपटारा करावा.`;
                     let encodedMsg = encodeURIComponent(msg);
                     let waUrl = mob ? `https://web.whatsapp.com/send?phone=+91${mob}&text=${encodedMsg}` : '';
 
@@ -406,18 +409,18 @@
                         <td>${mob ? `<input type="checkbox" class="row-checkbox" value="${waUrl}">` : '-'}</td>
                         <td><b>${info.name}</b> <span class="role-badge">${info.role}</span></td>
                         <td>${info.taluka}</td>
-                        <td><b>${info.total}</b></td>
-                        <td>${info.d30_60}</td>
-                        <td>${info.d60_90}</td>
-                        <td>${info.d90_180}</td>
-                        <td class="text-danger">${info.d180}</td>
+                        <td><b>${toMarathiNumber(info.total)}</b></td>
+                        <td>${toMarathiNumber(info.d30_60)}</td>
+                        <td>${toMarathiNumber(info.d60_90)}</td>
+                        <td>${toMarathiNumber(info.d90_180)}</td>
+                        <td class="text-danger">${toMarathiNumber(info.d180)}</td>
                         <td>${mob ? mob : '<span class="text-danger">नंबर नाही</span>'}</td>
                         <td>${mob ? `<a class="btn-wa" href="${waUrl}" target="_blank">💬 WhatsApp</a>` : '-'}</td>
                     </tr>`;
                     sCount++;
                 }
 
-                document.getElementById('surveyorCount').innerText = "एकूण अधिकारी/कर्मचारी: " + sCount;
+                document.getElementById('surveyorCount').innerText = "एकूण अधिकारी/कर्मचारी: " + toMarathiNumber(sCount);
                 document.getElementById('tableBody').innerHTML = tbody || '<tr><td colspan="10">कोणताही डेटा आढळला नाही.</td></tr>';
                 
                 if(sCount > 0) {
@@ -454,19 +457,19 @@
                 
                 if (index < urls.length) {
                     let countdown = 14;
-                    btn.innerText = `⏳ पाठवले (${index}/${urls.length}) - पुढचा मेसेज ${countdown}s मध्ये...`;
+                    btn.innerText = `⏳ पाठवले (${toMarathiNumber(index)}/${toMarathiNumber(urls.length)}) - पुढचा मेसेज ${toMarathiNumber(countdown)}s मध्ये...`;
                     
                     let timer = setInterval(() => {
                         countdown--;
                         if (countdown > 0) {
-                            btn.innerText = `⏳ पाठवले (${index}/${urls.length}) - पुढचा मेसेज ${countdown}s मध्ये...`;
+                            btn.innerText = `⏳ पाठवले (${toMarathiNumber(index)}/${toMarathiNumber(urls.length)}) - पुढचा मेसेज ${toMarathiNumber(countdown)}s मध्ये...`;
                         } else {
                             clearInterval(timer);
                             sendNext();
                         }
                     }, 1000);
                 } else {
-                    btn.innerText = `✅ सर्व (${urls.length}) मेसेज पाठवून झाले!`;
+                    btn.innerText = `✅ सर्व (${toMarathiNumber(urls.length)}) मेसेज पाठवून झाले!`;
                     btn.disabled = false;
                 }
             }
