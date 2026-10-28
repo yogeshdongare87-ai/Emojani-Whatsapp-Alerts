@@ -228,14 +228,13 @@
                 </tr>
             </thead>
             <tbody id="tableBody">
-                <tr><td colspan="10" style="color: #94a3b8; padding: 20px;">कृपया दोन्ही Excel फाइल्स अपलोड करून 'डेटा प्रक्रिया करा' वर क्लिक करा.</td></tr>
+                <tr><td colspan="10" style="color: #94a3b8; padding: 20px;">कृपया दोन्ही दोन्ही फाइल्स अपलोड करून 'डेटा प्रक्रिया करा' वर क्लिक करा.</td></tr>
             </tbody>
         </table>
     </div>
 </div>
 
 <script>
-    // Function to convert English numbers to Marathi Devanagari numbers
     function toMarathiNumber(num) {
         const marathiDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
         return String(num).replace(/[0-9]/g, function(w) {
@@ -274,15 +273,14 @@
                 if(idx === 0 || !row || row.length === 0) return;
 
                 let nameCol = String(row[0] || '').trim();
-                let mobVal = "";
+                let talukaCol = String(row[1] || '').trim(); // Column B
+                let statusCol = String(row[2] || '').trim(); // Column C
                 
+                let mobVal = "";
                 row.forEach(cell => {
                     let str = String(cell || '').replace(/[^0-9]/g, '');
                     if(str.length >= 10) mobVal = str.slice(-10);
                 });
-
-                let talukaCol = String(row[2] || '').trim();
-                let statusCol = String(row[3] || '').trim();
 
                 if(nameCol && mobVal) {
                     contactsByName[nameCol.toLowerCase()] = { name: nameCol, mob: mobVal };
@@ -290,7 +288,7 @@
 
                 if(talukaCol && statusCol && mobVal) {
                     let comboKey = (talukaCol + "___" + statusCol).toLowerCase();
-                    contactsByTalukaStatus[comboKey] = { name: nameCol || statusCol, mob: mobVal };
+                    contactsByTalukaStatus[comboKey] = { name: nameCol, mob: mobVal };
                 }
             });
 
@@ -386,7 +384,6 @@
                     }
                 }
 
-                // Update Cards Stats
                 document.getElementById('st-total').innerText = toMarathiNumber(totAll);
                 document.getElementById('st-30').innerText = toMarathiNumber(tot30);
                 document.getElementById('st-60').innerText = toMarathiNumber(tot60);
@@ -400,7 +397,6 @@
                     let info = grouped[key];
                     let mob = info.mob || '';
 
-                    // Message text with 100% Marathi numbers
                     let msg = `नमस्कार ${info.name} जी,\n\nभूमी अभिलेख विभाग - प्रलंबित प्रकरणे सूचना:\nआपल्याकडे (${info.role} - ${info.taluka}) एकूण ${toMarathiNumber(info.total)} प्रकरणे प्रलंबित आहेत:\n• १८० दिवसांपेक्षा जास्त: ${toMarathiNumber(info.d180)} केस\n• ९० ते १८० दिवस: ${toMarathiNumber(info.d90_180)} केस\n• ६० ते ९० दिवस: ${toMarathiNumber(info.d60_90)} केस\n• ३० ते ६० दिवस: ${toMarathiNumber(info.d30_60)} केस\n\nकृपया सदर प्रकरणांचा त्वरित निपटारा करावा.`;
                     let encodedMsg = encodeURIComponent(msg);
                     let waUrl = mob ? `https://web.whatsapp.com/send?phone=+91${mob}&text=${encodedMsg}` : '';
