@@ -397,7 +397,9 @@
                     let info = grouped[key];
                     let mob = info.mob || '';
 
-                    let msg = `नमस्कार ${info.name} जी,\n\nभूमी अभिलेख विभाग - प्रलंबित प्रकरणे सूचना:\nआपल्याकडे (${info.role} - ${info.taluka}) एकूण ${toMarathiNumber(info.total)} प्रकरणे प्रलंबित आहेत:\n• १८० दिवसांपेक्षा जास्त: ${toMarathiNumber(info.d180)} केस\n• ९० ते १८० दिवस: ${toMarathiNumber(info.d90_180)} केस\n• ६० ते ९० दिवस: ${toMarathiNumber(info.d60_90)} केस\n• ३० ते ६० दिवस: ${toMarathiNumber(info.d30_60)} केस\n\nकृपया सदर प्रकरणांचा त्वरित निपटारा करावा.`;
+                    let msg = `नमस्कार ${info.name} जी,\n\nभूमी अभिलेख विभाग - प्रलंबित प्रकरणे सूचना:\nआपल्याकडे (${info.role} - ${info.taluka}) एकूण ${toMarathiNumber(info.total)} प्रकरणे प्रलंबित आहेत:\n• १८० दिवसांपेक्षा जास्त: ${toMarathiNumber(info.d180)} केस\n• ९० ते १८० दिवस: ${toMarathiNumber(info.d90_180)} केस\n• ६० ते ९० दिवस: ${toMarathiNumber(info.d60_90)} केस\n• ३० ते ६० दिवस: ${toMarathiNumber(info.d30_60)} केस\n\nकृपया सदर प्रकरणांचा त्वरित निपटारा करावा.अन्यथा आपले विरुद्ध महाराष्ट्र नागरी सेवा,  (शिस्त व  अपील) नियम 1979 चे नियम नुसार कारवाई करण्यात येईल याची नोंद घ्यावी. 
+     आदेशानुसार 
+मा. जिल्हा अधीक्षक भूमिअभिलेख, अमरावती.`;
                     let encodedMsg = encodeURIComponent(msg);
                     let waUrl = mob ? `https://web.whatsapp.com/send?phone=+91${mob}&text=${encodedMsg}` : '';
 
