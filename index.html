@@ -1,168 +1,505 @@
-import pandas as pd
-import pyautogui
-import urllib.parse
-import time
-import webbrowser
-import tkinter as tk
-from tkinter import filedialog
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Mojani Multi-Role Smart Dashboard</title>
+    <!-- SheetJS Excel Library -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --primary-light: #eff6ff;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --info: #2563eb;
+            --dark: #1f2937;
+            --light: #f8fafc;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f1f5f9;
+            color: var(--dark);
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .header {
+            text-align: center;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--primary-light);
+            margin-bottom: 25px;
+        }
+        .header h1 { color: var(--primary); margin: 0 0 8px 0; font-size: 26px; }
+        .header p { color: #64748b; margin: 0; font-size: 15px; }
+        .upload-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        @media (max-width: 768px) { .upload-cards { grid-template-columns: 1fr; } }
+        .card {
+            background: var(--light);
+            border: 2px dashed #cbd5e1;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+        .file-input { display: none; }
+        .btn-upload {
+            display: inline-block;
+            background: var(--info);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        .file-name {
+            display: block;
+            margin-top: 8px;
+            font-size: 13px;
+            color: var(--success);
+            font-weight: 600;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            padding: 15px 10px;
+            border-radius: 8px;
+            color: white;
+            text-align: center;
+        }
+        .stat-card h2 { margin: 5px 0 0 0; font-size: 24px; }
+        .stat-card p { margin: 0; font-size: 12px; opacity: 0.9; }
+        .bg-total { background: #475569; }
+        .bg-15 { background: #10b981; }
+        .bg-30-sub { background: #06b6d4; }
+        .bg-30 { background: #0284c7; }
+        .bg-60 { background: #d97706; }
+        .bg-90 { background: #ea580c; }
+        .bg-180 { background: #dc2626; }
 
-def main():
-    print("📂 Step 1: Apni 'contacts.xlsx' file select karein...")
-    root = tk.Tk()
-    root.withdraw()
-    contacts_path = filedialog.askopenfilename(title="Contacts Excel File Chunein", filetypes=[("Excel Files", "*.xlsx *.xls")])
+        .action-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .search-box {
+            padding: 10px 15px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            width: 280px;
+            font-size: 14px;
+        }
+        .btn-process {
+            background: var(--success);
+            color: white;
+            border: none;
+            padding: 14px 25px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .btn-process:hover { background: #15803d; }
+        .btn-selected-wa {
+            background: #25d366;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            display: none;
+        }
+        .btn-selected-wa:hover { background: #1eb854; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th, td {
+            padding: 10px 8px;
+            text-align: center;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        th { background: #f8fafc; color: #475569; font-weight: 700; }
+        .btn-wa {
+            background: #22c55e;
+            color: white;
+            text-decoration: none;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 11px;
+            display: inline-block;
+        }
+        .btn-wa:hover { background: #16a34a; }
+        .text-danger { color: var(--danger); font-weight: bold; }
+        .role-badge {
+            background: #e0f2fe;
+            color: #0369a1;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            display: block;
+            margin-top: 3px;
+        }
+        input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+    </style>
+</head>
+<body>
 
-    if not contacts_path:
-        print("❌ Contacts file select nahi ki gayi.")
-        return
-    print(f"✓ Contacts File: {contacts_path}")
-    
-    print("📂 Step 2: Apni 'Report_7' Excel file select karein...")
-    report_path = filedialog.askopenfilename(title="Report Excel File Chunein", filetypes=[("Excel Files", "*.xlsx *.xls")])
-    
-    if not report_path:
-        print("❌ Report file select nahi ki gayi.")
-        return
-    print(f"✓ Report File: {report_path}")
+<div class="container">
+    <div class="header">
+        <h1>🏛️ भूमी अभिलेख - अमरावती (E-Mojani Smart Dashboard)</h1>
+        <p>भूकरमापक, छाननी लिपिक, शिरस्तेदार व उपभूमी अभिलेख अधिकारी प्रलंबित प्रकरणे</p>
+    </div>
+
+    <!-- Upload Section -->
+    <div class="upload-cards">
+        <div class="card">
+            <h3>१. प्रलंबित अहवाल अपलोड करा (Report_7)</h3>
+            <label for="reportFile" class="btn-upload">📂 Select Report Excel</label>
+            <input type="file" id="reportFile" class="file-input" accept=".xlsx, .xls" onchange="updateFileName('reportFile', 'reportName')">
+            <span id="reportName" class="file-name">फाईल निवडलेली नाही</span>
+        </div>
+        <div class="card">
+            <h3>२. मोबाईल नंबर मास्टर यादी (Contacts)</h3>
+            <label for="contactsFile" class="btn-upload">📱 Select Contacts Excel</label>
+            <input type="file" id="contactsFile" class="file-input" accept=".xlsx, .xls" onchange="updateFileName('contactsFile', 'contactsName')">
+            <span id="contactsName" class="file-name">फाईल निवडलेली नाही</span>
+        </div>
+    </div>
+
+    <button class="btn-process" onclick="processData()">🚀 डेटा प्रक्रिया करा (Process Data)</button>
+
+    <!-- Stats Summary -->
+    <div class="stats-grid">
+        <div class="stat-card bg-total"><p>एकूण प्रलंबित</p><h2 id="st-total">0</h2></div>
+        <div class="stat-card bg-15"><p>० ते १५ दिवस</p><h2 id="st-15">0</h2></div>
+        <div class="stat-card bg-30-sub"><p>१५ ते ३० दिवस</p><h2 id="st-15-30">0</h2></div>
+        <div class="stat-card bg-30"><p>३० ते ६० दिवस</p><h2 id="st-30">0</h2></div>
+        <div class="stat-card bg-60"><p>६० ते ९० दिवस</p><h2 id="st-60">0</h2></div>
+        <div class="stat-card bg-90"><p>९० ते १८० दिवस</p><h2 id="st-90">0</h2></div>
+        <div class="stat-card bg-180"><p>१८०+ दिवस (अति-गंभीर)</p><h2 id="st-180">0</h2></div>
+    </div>
+
+    <!-- Action Bar -->
+    <div class="action-bar">
+        <input type="text" id="searchInput" class="search-box" placeholder="अधिकारी / भूकरमापक शोधा..." onkeyup="filterTable()">
+        <button id="btnSelectedWa" class="btn-selected-wa" onclick="startSendingSelected()">📲 निवडलेल्यांना WhatsApp पाठवा (14 सेकंद अंतर)</button>
+        <span id="surveyorCount" style="font-weight: bold; color: #475569;">एकूण अधिकारी/कर्मचारी: 0</span>
+    </div>
+
+    <!-- Table Output -->
+    <div style="overflow-x: auto;">
+        <table id="dataTable">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)"></th>
+                    <th>अधिकारी / भूकरमापक (Official)</th>
+                    <th>तालुका (Taluka)</th>
+                    <th>एकूण केस</th>
+                    <th>०-१५ दिवस</th>
+                    <th>१५-३० दिवस</th>
+                    <th>३०-६० दिवस</th>
+                    <th>६०-९० दिवस</th>
+                    <th>९०-१८० दिवस</th>
+                    <th>> १८० दिवस</th>
+                    <th>मोबाईल नंबर</th>
+                    <th>WhatsApp मेसेज</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <tr><td colspan="12" style="color: #94a3b8; padding: 20px;">कृपया दोन्ही फाइल्स अपलोड करून 'डेटा प्रक्रिया करा' वर क्लिक करा.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    function toMarathiNumber(num) {
+        const marathiDigits = ['०', '१', '२', '३', '४', '५', '६', '७', '८', '९'];
+        return String(num).replace(/[0-9]/g, function(w) {
+            return marathiDigits[+w];
+        });
+    }
+
+    function updateFileName(inputId, targetId) {
+        const input = document.getElementById(inputId);
+        const target = document.getElementById(targetId);
+        if(input.files.length > 0) {
+            target.innerText = "✓ " + input.files[0].name;
+        }
+    }
+
+    function processData() {
+        const reportInput = document.getElementById('reportFile').files[0];
+        const contactsInput = document.getElementById('contactsFile').files[0];
+
+        if (!reportInput || !contactsInput) {
+            alert("कृपया दोन्ही Excel फाइल्स (Report आणि Contacts) सेलेक्ट करा!");
+            return;
+        }
+
+        const rContacts = new FileReader();
+        rContacts.onload = function(e) {
+            const dataC = new Uint8Array(e.target.result);
+            const wbC = XLSX.read(dataC, {type: 'array'});
+            const sheetC = wbC.Sheets[wbC.SheetNames[0]];
+            const rawContacts = XLSX.utils.sheet_to_json(sheetC, {header: 1});
+
+            const contactsByName = {};
+            const contactsByTalukaStatus = {};
+
+            rawContacts.forEach((row, idx) => {
+                if(idx === 0 || !row || row.length === 0) return;
+
+                let nameCol = String(row[0] || '').trim();
+                let talukaCol = String(row[1] || '').trim(); // Column B
+                let statusCol = String(row[2] || '').trim(); // Column C
+                
+                let mobVal = "";
+                row.forEach(cell => {
+                    let str = String(cell || '').replace(/[^0-9]/g, '');
+                    if(str.length >= 10) mobVal = str.slice(-10);
+                });
+
+                if(nameCol && mobVal) {
+                    contactsByName[nameCol.toLowerCase()] = { name: nameCol, mob: mobVal };
+                }
+
+                if(talukaCol && statusCol && mobVal) {
+                    let comboKey = (talukaCol + "___" + statusCol).toLowerCase();
+                    contactsByTalukaStatus[comboKey] = { name: nameCol, mob: mobVal };
+                }
+            });
+
+            const rReport = new FileReader();
+            rReport.onload = function(e2) {
+                const dataR = new Uint8Array(e2.target.result);
+                const wbR = XLSX.read(dataR, {type: 'array'});
+                const sheetR = wbR.Sheets[wbR.SheetNames[0]];
+                const rawReport = XLSX.utils.sheet_to_json(sheetR, {header: 1});
+
+                const grouped = {};
+                let totAll = 0, tot15 = 0, tot15_30 = 0, tot30 = 0, tot60 = 0, tot90 = 0, tot180 = 0;
+
+                for(let i = 0; i < rawReport.length; i++) {
+                    let row = rawReport[i] || [];
+                    if(row.length < 9) continue;
+
+                    let taluka = String(row[2] || '').trim();
+                    let surveyor = String(row[4] || '').trim();
+                    let status = String(row[5] || '').trim();
+                    let daysVal = row[8];
+                    let days = parseInt(daysVal, 10);
+
+                    if(!status || status === 'स्थिती' || isNaN(days)) continue;
+
+                    let assignedName = "";
+                    let roleTag = "";
+                    let targetMob = "";
+
+                    if(status.includes("मोजणीची माहिती")) {
+                        roleTag = "भूकरमापक";
+                        assignedName = surveyor;
+                        if(contactsByName[surveyor.toLowerCase()]) {
+                            targetMob = contactsByName[surveyor.toLowerCase()].mob;
+                        }
+                    } else {
+                        let comboKey = (taluka + "___" + status).toLowerCase();
+                        let matchedOfficial = contactsByTalukaStatus[comboKey];
+
+                        if(status.includes("छाननी लिपिक")) {
+                            roleTag = "छाननी लिपिक";
+                        } else if(status.includes("शिरस्तेदार") || status.includes("मुख्यालय")) {
+                            roleTag = "शिरस्तेदार";
+                        } else if(status.includes("ऊप.अ") || status.includes("मान्यतेवर") || status.includes("भू. अ")) {
+                            roleTag = "उपभूमी अभिलेख अधिकारी";
+                        } else {
+                            roleTag = "अधिकारी";
+                        }
+
+                        if(matchedOfficial) {
+                            assignedName = matchedOfficial.name;
+                            targetMob = matchedOfficial.mob;
+                        } else {
+                            assignedName = `${roleTag} (${taluka})`;
+                            targetMob = "";
+                        }
+                    }
+
+                    if(!assignedName || assignedName === 'undefined') continue;
+
+                    totAll++;
+
+                    let groupKey = assignedName + "___" + taluka + "___" + roleTag;
+
+                    if(!grouped[groupKey]) {
+                        grouped[groupKey] = {
+                            name: assignedName,
+                            taluka: taluka,
+                            role: roleTag,
+                            mob: targetMob,
+                            total: 0, d0_15: 0, d15_30: 0, d30_60: 0, d60_90: 0, d90_180: 0, d180: 0
+                        };
+                    }
+                    
+                    if(!grouped[groupKey].mob && targetMob) {
+                        grouped[groupKey].mob = targetMob;
+                    }
+
+                    grouped[groupKey].total++;
+
+                    if(days > 180) {
+                        grouped[groupKey].d180++;
+                        tot180++;
+                    } else if(days > 90) {
+                        grouped[groupKey].d90_180++;
+                        tot90++;
+                    } else if(days >= 60 && days <= 90) {
+                        grouped[groupKey].d60_90++;
+                        tot60++;
+                    } else if(days >= 30 && days < 60) {
+                        grouped[groupKey].d30_60++;
+                        tot30++;
+                    } else if(days >= 15 && days < 30) {
+                        grouped[groupKey].d15_30++;
+                        tot15_30++;
+                    } else if(days >= 0 && days < 15) {
+                        grouped[groupKey].d0_15++;
+                        tot15++;
+                    }
+                }
+
+                document.getElementById('st-total').innerText = toMarathiNumber(totAll);
+                document.getElementById('st-15').innerText = toMarathiNumber(tot15);
+                document.getElementById('st-15-30').innerText = toMarathiNumber(tot15_30);
+                document.getElementById('st-30').innerText = toMarathiNumber(tot30);
+                document.getElementById('st-60').innerText = toMarathiNumber(tot60);
+                document.getElementById('st-90').innerText = toMarathiNumber(tot90);
+                document.getElementById('st-180').innerText = toMarathiNumber(tot180);
+
+                let tbody = '';
+                let sCount = 0;
+
+                for(let key in grouped) {
+                    let info = grouped[key];
+                    let mob = info.mob || '';
+
+                    let msg = `नमस्कार ${info.name} सर / मॅडम,\n\nभूमी अभिलेख विभाग - प्रलंबित प्रकरणे सूचना:\nआपल्याकडे (${info.role} - ${info.taluka}) एकूण ${toMarathiNumber(info.total)} प्रकरणे प्रलंबित आहेत:\n• १८० दिवसांपेक्षा जास्त: ${toMarathiNumber(info.d180)} केस\n• ९० ते १८० दिवस: ${toMarathiNumber(info.d90_180)} केस\n• ६० ते ९० दिवस: ${toMarathiNumber(info.d60_90)} केस\n• ३० ते ६० दिवस: ${toMarathiNumber(info.d30_60)} केस\n• १५ ते ३० दिवस: ${toMarathiNumber(info.d15_30)} केस\n• ० ते १५ दिवस: ${toMarathiNumber(info.d0_15)} केस\n\nकृपया सदर प्रकरणांचा त्वरित निपटारा करावा. तरी आपणास नम्र विनंती आहे की, कृपया प्रलंबित प्रकरणांचा आढावा घेऊन त्यांचा शक्य तितक्या लवकर निपटारा करण्यासाठी आवश्यक कार्यवाही करावी.आपल्या सहकार्याबद्दल मनःपूर्वक धन्यवाद.\n\nआदेशानुसार\nमा. जिल्हा अधीक्षक भूमिअभिलेख, अमरावती.`;
+                    let encodedMsg = encodeURIComponent(msg);
+                    let waUrl = mob ? `https://web.whatsapp.com/send?phone=+91${mob}&text=${encodedMsg}` : '';
+
+                    tbody += `<tr>
+                        <td>${mob ? `<input type="checkbox" class="row-checkbox" value="${waUrl}">` : '-'}</td>
+                        <td><b>${info.name}</b> <span class="role-badge">${info.role}</span></td>
+                        <td>${info.taluka}</td>
+                        <td><b>${toMarathiNumber(info.total)}</b></td>
+                        <td>${toMarathiNumber(info.d0_15)}</td>
+                        <td>${toMarathiNumber(info.d15_30)}</td>
+                        <td>${toMarathiNumber(info.d30_60)}</td>
+                        <td>${toMarathiNumber(info.d60_90)}</td>
+                        <td>${toMarathiNumber(info.d90_180)}</td>
+                        <td class="text-danger">${toMarathiNumber(info.d180)}</td>
+                        <td>${mob ? mob : '<span class="text-danger">नंबर नाही</span>'}</td>
+                        <td>${mob ? `<a class="btn-wa" href="${waUrl}" target="_blank">💬 WhatsApp</a>` : '-'}</td>
+                    </tr>`;
+                    sCount++;
+                }
+
+                document.getElementById('surveyorCount').innerText = "एकूण अधिकारी/कर्मचारी: " + toMarathiNumber(sCount);
+                document.getElementById('tableBody').innerHTML = tbody || '<tr><td colspan="12">कोणताही डेटा आढळला नाही.</td></tr>';
+                
+                if(sCount > 0) {
+                    document.getElementById('btnSelectedWa').style.display = "inline-block";
+                }
+            };
+            rReport.readAsArrayBuffer(reportInput);
+        };
+        rContacts.readAsArrayBuffer(contactsInput);
+    }
+
+    function toggleSelectAll(master) {
+        let checkboxes = document.querySelectorAll('.row-checkbox');
+        checkboxes.forEach(cb => cb.checked = master.checked);
+    }
+
+    function startSendingSelected() {
+        let checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+        if(checkedBoxes.length === 0) {
+            alert("कृपया कमीत कमी एका अधिकाऱ्याला सिलेक्ट करा!");
+            return;
+        }
+
+        let urls = Array.from(checkedBoxes).map(cb => cb.value);
+        let btn = document.getElementById('btnSelectedWa');
+        btn.disabled = true;
+
+        let index = 0;
         
-    # Contacts Data Load Karein
-    df_contacts = pd.read_excel(contacts_path)
-    contacts_by_name = {}
-    contacts_by_taluka_status = {}
-
-    for idx, row in df_contacts.iterrows():
-        name = str(row.iloc[0]).strip() if pd.notna(row.iloc[0]) else ""
-        taluka = str(row.iloc[1]).strip() if len(row) > 1 and pd.notna(row.iloc[1]) else ""
-        status = str(row.iloc[2]).strip() if len(row) > 2 and pd.notna(row.iloc[2]) else ""
-        
-        mob = ""
-        for val in row.values:
-            s = ''.join(filter(str.isdigit, str(val)))
-            if len(s) >= 10:
-                mob = s[-10:]
-                break
-        
-        if name and mob:
-            contacts_by_name[name.lower()] = {"name": name, "mob": mob}
-        if taluka and status and mob:
-            key = f"{taluka}___{status}".lower()
-            contacts_by_taluka_status[key] = {"name": name if name else status, "mob": mob}
-
-    # Report Data Load aur Process Karein
-    df_report = pd.read_excel(report_path, header=None)
-    data_rows = df_report.iloc[4:].values
-
-    grouped = {}
-    for row in data_rows:
-        if len(row) < 9:
-            continue
-        taluka = str(row[2]).strip() if pd.notna(row[2]) else ""
-        surveyor = str(row[4]).strip() if pd.notna(row[4]) else ""
-        status = str(row[5]).strip() if pd.notna(row[5]) else ""
-        try:
-            days = int(row[8])
-        except:
-            continue
-
-        if not status or status == 'स्थिती':
-            continue
-
-        assigned_name = ""
-        role_tag = ""
-        target_mob = ""
-
-        if "मोजणीची माहिती" in status:
-            role_tag = "भूकरमापक"
-            assigned_name = surveyor
-            if surveyor.lower() in contacts_by_name:
-                target_mob = contacts_by_name[surveyor.lower()]["mob"]
-        else:
-            combo_key = f"{taluka}___{status}".lower()
-            matched = contacts_by_taluka_status.get(combo_key)
-
-            if "छाननी लिपिक" in status:
-                role_tag = "छाननी लिपिक"
-            elif "शिरस्तेदार" in status or "मुख्यालय" in status:
-                role_tag = "शिरस्तेदार"
-            elif "ऊप.अ" in status or "मान्यतेवर" in status or "भू. अ" in status:
-                role_tag = "उपभूमी अभिलेख अधिकारी"
-            else:
-                role_tag = "अधिकारी"
-
-            if matched:
-                assigned_name = matched["name"]
-                target_mob = matched["mob"]
-            else:
-                assigned_name = f"{role_tag} ({taluka})"
-                target_mob = ""
-
-        if not assigned_name or assigned_name == 'nan':
-            continue
-
-        group_key = f"{assigned_name}___{taluka}___{role_tag}"
-        if group_key not in grouped:
-            grouped[group_key] = {
-                "name": assigned_name,
-                "taluka": taluka,
-                "role": role_tag,
-                "mob": target_mob,
-                "total": 0, "d180": 0, "d90_180": 0, "d60_90": 0, "d30_60": 0, "d15_30": 0, "d0_15": 0
+        function sendNext() {
+            if (index < urls.length) {
+                window.open(urls[index], '_blank');
+                index++;
+                
+                if (index < urls.length) {
+                    let countdown = 14;
+                    btn.innerText = `⏳ पाठवले (${toMarathiNumber(index)}/${toMarathiNumber(urls.length)}) - पुढचा मेसेज ${toMarathiNumber(countdown)}s मध्ये...`;
+                    
+                    let timer = setInterval(() => {
+                        countdown--;
+                        if (countdown > 0) {
+                            btn.innerText = `⏳ पाठवले (${toMarathiNumber(index)}/${toMarathiNumber(urls.length)}) - पुढचा मेसेज ${toMarathiNumber(countdown)}s मध्ये...`;
+                        } else {
+                            clearInterval(timer);
+                            sendNext();
+                        }
+                    }, 1000);
+                } else {
+                    btn.innerText = `✅ सर्व (${toMarathiNumber(urls.length)}) मेसेज पाठवून झाले!`;
+                    btn.disabled = false;
+                }
             }
+        }
 
-        if not grouped[group_key]["mob"] and target_mob:
-            grouped[group_key]["mob"] = target_mob
+        sendNext();
+    }
 
-        grouped[group_key]["total"] += 1
-        
-        # Time Buckets logic
-        if days > 180:
-            grouped[group_key]["d180"] += 1
-        elif days > 90:
-            grouped[group_key]["d90_180"] += 1
-        elif 60 <= days <= 90:
-            grouped[group_key]["d60_90"] += 1
-        elif 30 <= days < 60:
-            grouped[group_key]["d30_60"] += 1
-        elif 15 <= days < 30:
-            grouped[group_key]["d15_30"] += 1
-        elif days < 15:
-            grouped[group_key]["d0_15"] += 1
+    function filterTable() {
+        let input = document.getElementById("searchInput").value.toLowerCase();
+        let rows = document.getElementById("tableBody").getElementsByTagName("tr");
+        for (let row of rows) {
+            let officialName = row.getElementsByTagName("td")[1]?.innerText.toLowerCase() || "";
+            let talukaName = row.getElementsByTagName("td")[2]?.innerText.toLowerCase() || "";
+            row.style.display = (officialName.includes(input) || talukaName.includes(input)) ? "" : "none";
+        }
+    }
+</script>
 
-    print(f"\n✓ Kul {len(grouped)} adhikari/roles ke pralambit cases mil gaye hain.")
-    print("🚀 WhatsApp Automation 5 sekund mein shuru ho raha hai...")
-    time.sleep(5)
-
-    sent_count = 0
-    for key, info in grouped.items():
-        mob = info["mob"]
-        if not mob or len(mob) < 10:
-            print(f"⚠️ Number nahi mila: {info['name']} ({info['role']} - {info['taluka']})")
-            continue
-
-        msg = (
-            f"नमस्कार {info['name']} सर/मॅडम,\n\n"
-            f"भूमी अभिलेख विभाग - प्रलंबित प्रकरणे सूचना:\n"
-            f"आपल्याकडे ({info['role']} - {info['taluka']}) एकूण {info['total']} प्रकरणे प्रलंबित आहेत:\n"
-            f"• १८० दिवसांपेक्षा जास्त: {info['d180']} केस\n"
-            f"• ९० ते १८० दिवस: {info['d90_180']} केस\n"
-            f"• ६० ते ९० दिवस: {info['d60_90']} केस\n"
-            f"• ३० ते ६० दिवस: {info['d30_60']} केस\n"
-            f"• १५ ते ३० दिवस: {info['d15_30']} केस\n"
-            f"• ० ते १५ दिवस: {info['d0_15']} केस\n\n"
-            f"तरी आपणास नम्र विनंती आहे की, कृपया प्रलंबित प्रकरणांचा आढावा घेऊन त्यांचा शक्य तितक्या लवकर निपटारा करण्यासाठी आवश्यक कार्यवाही करावी. आपल्या सहकार्याबद्दल मनःपूर्वक धन्यवाद."
-        )
-
-        encoded_msg = urllib.parse.quote(msg)
-        url = f"https://web.whatsapp.com/send?phone=+91{mob}&text={encoded_msg}"
-
-        webbrowser.open(url)
-        time.sleep(13) 
-        pyautogui.press('enter') 
-        sent_count += 1
-        print(f"[{sent_count}] ✅ Message sent to {info['name']} ({mob}) - Total Cases: {info['total']}")
-        time.sleep(5)
-
-    print(f"\n🎉 Bahut badhiya! Kul {sent_count} adhikariyon ko WhatsApp sandesh bhej diye gaye hain.")
-
-if __name__ == "__main__":
-    main()
+</body>
+</html>
