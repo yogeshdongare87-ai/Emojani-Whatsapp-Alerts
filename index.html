@@ -24,7 +24,7 @@
             color: var(--dark);
         }
         .container {
-            max-width: 1250px;
+            max-width: 1400px;
             margin: 0 auto;
             background: white;
             padding: 25px;
@@ -74,19 +74,21 @@
         }
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
             margin-bottom: 25px;
         }
         .stat-card {
-            padding: 15px;
+            padding: 15px 10px;
             border-radius: 8px;
             color: white;
             text-align: center;
         }
-        .stat-card h2 { margin: 5px 0 0 0; font-size: 28px; }
-        .stat-card p { margin: 0; font-size: 13px; opacity: 0.9; }
+        .stat-card h2 { margin: 5px 0 0 0; font-size: 24px; }
+        .stat-card p { margin: 0; font-size: 12px; opacity: 0.9; }
         .bg-total { background: #475569; }
+        .bg-15 { background: #10b981; }
+        .bg-30-sub { background: #06b6d4; }
         .bg-30 { background: #0284c7; }
         .bg-60 { background: #d97706; }
         .bg-90 { background: #ea580c; }
@@ -135,10 +137,10 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 14px;
+            font-size: 13px;
         }
         th, td {
-            padding: 12px 10px;
+            padding: 10px 8px;
             text-align: center;
             border-bottom: 1px solid #e2e8f0;
         }
@@ -147,10 +149,10 @@
             background: #22c55e;
             color: white;
             text-decoration: none;
-            padding: 6px 14px;
+            padding: 6px 12px;
             border-radius: 20px;
             font-weight: 600;
-            font-size: 12px;
+            font-size: 11px;
             display: inline-block;
         }
         .btn-wa:hover { background: #16a34a; }
@@ -158,9 +160,9 @@
         .role-badge {
             background: #e0f2fe;
             color: #0369a1;
-            padding: 2px 8px;
+            padding: 2px 6px;
             border-radius: 12px;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: bold;
             display: block;
             margin-top: 3px;
@@ -197,6 +199,8 @@
     <!-- Stats Summary -->
     <div class="stats-grid">
         <div class="stat-card bg-total"><p>एकूण प्रलंबित</p><h2 id="st-total">0</h2></div>
+        <div class="stat-card bg-15"><p>० ते १५ दिवस</p><h2 id="st-15">0</h2></div>
+        <div class="stat-card bg-30-sub"><p>१५ ते ३० दिवस</p><h2 id="st-15-30">0</h2></div>
         <div class="stat-card bg-30"><p>३० ते ६० दिवस</p><h2 id="st-30">0</h2></div>
         <div class="stat-card bg-60"><p>६० ते ९० दिवस</p><h2 id="st-60">0</h2></div>
         <div class="stat-card bg-90"><p>९० ते १८० दिवस</p><h2 id="st-90">0</h2></div>
@@ -219,6 +223,8 @@
                     <th>अधिकारी / भूकरमापक (Official)</th>
                     <th>तालुका (Taluka)</th>
                     <th>एकूण केस</th>
+                    <th>०-१५ दिवस</th>
+                    <th>१५-३० दिवस</th>
                     <th>३०-६० दिवस</th>
                     <th>६०-९० दिवस</th>
                     <th>९०-१८० दिवस</th>
@@ -228,7 +234,7 @@
                 </tr>
             </thead>
             <tbody id="tableBody">
-                <tr><td colspan="10" style="color: #94a3b8; padding: 20px;">कृपया दोन्ही दोन्ही फाइल्स अपलोड करून 'डेटा प्रक्रिया करा' वर क्लिक करा.</td></tr>
+                <tr><td colspan="12" style="color: #94a3b8; padding: 20px;">कृपया दोन्ही फाइल्स अपलोड करून 'डेटा प्रक्रिया करा' वर क्लिक करा.</td></tr>
             </tbody>
         </table>
     </div>
@@ -300,7 +306,7 @@
                 const rawReport = XLSX.utils.sheet_to_json(sheetR, {header: 1});
 
                 const grouped = {};
-                let totAll = 0, tot30 = 0, tot60 = 0, tot90 = 0, tot180 = 0;
+                let totAll = 0, tot15 = 0, tot15_30 = 0, tot30 = 0, tot60 = 0, tot90 = 0, tot180 = 0;
 
                 for(let i = 0; i < rawReport.length; i++) {
                     let row = rawReport[i] || [];
@@ -359,7 +365,7 @@
                             taluka: taluka,
                             role: roleTag,
                             mob: targetMob,
-                            total: 0, d30_60: 0, d60_90: 0, d90_180: 0, d180: 0
+                            total: 0, d0_15: 0, d15_30: 0, d30_60: 0, d60_90: 0, d90_180: 0, d180: 0
                         };
                     }
                     
@@ -381,10 +387,18 @@
                     } else if(days >= 30 && days < 60) {
                         grouped[groupKey].d30_60++;
                         tot30++;
+                    } else if(days >= 15 && days < 30) {
+                        grouped[groupKey].d15_30++;
+                        tot15_30++;
+                    } else if(days >= 0 && days < 15) {
+                        grouped[groupKey].d0_15++;
+                        tot15++;
                     }
                 }
 
                 document.getElementById('st-total').innerText = toMarathiNumber(totAll);
+                document.getElementById('st-15').innerText = toMarathiNumber(tot15);
+                document.getElementById('st-15-30').innerText = toMarathiNumber(tot15_30);
                 document.getElementById('st-30').innerText = toMarathiNumber(tot30);
                 document.getElementById('st-60').innerText = toMarathiNumber(tot60);
                 document.getElementById('st-90').innerText = toMarathiNumber(tot90);
@@ -397,9 +411,7 @@
                     let info = grouped[key];
                     let mob = info.mob || '';
 
-                    let msg = `नमस्कार ${info.name} सर / मॅडम,\n\nभूमी अभिलेख विभाग - प्रलंबित प्रकरणे सूचना:\nआपल्याकडे (${info.role} - ${info.taluka}) एकूण ${toMarathiNumber(info.total)} प्रकरणे प्रलंबित आहेत:\n• १८० दिवसांपेक्षा जास्त: ${toMarathiNumber(info.d180)} केस\n• ९० ते १८० दिवस: ${toMarathiNumber(info.d90_180)} केस\n• ६० ते ९० दिवस: ${toMarathiNumber(info.d60_90)} केस\n• ३० ते ६० दिवस: ${toMarathiNumber(info.d30_60)} केस\n\nकृपया सदर प्रकरणांचा त्वरित निपटारा करावा.अन्यथा आपले विरुद्ध महाराष्ट्र नागरी सेवा,  (शिस्त व  अपील) नियम 1979 चे नियम नुसार कारवाई करण्यात येईल याची नोंद घ्यावी. 
-     आदेशानुसार 
-मा. जिल्हा अधीक्षक भूमिअभिलेख, अमरावती.`;
+                    let msg = `नमस्कार ${info.name} सर / मॅडम,\n\nभूमी अभिलेख विभाग - प्रलंबित प्रकरणे सूचना:\nआपल्याकडे (${info.role} - ${info.taluka}) एकूण ${toMarathiNumber(info.total)} प्रकरणे प्रलंबित आहेत:\n• १८० दिवसांपेक्षा जास्त: ${toMarathiNumber(info.d180)} केस\n• ९० ते १८० दिवस: ${toMarathiNumber(info.d90_180)} केस\n• ६० ते ९० दिवस: ${toMarathiNumber(info.d60_90)} केस\n• ३० ते ६० दिवस: ${toMarathiNumber(info.d30_60)} केस\n• १५ ते ३० दिवस: ${toMarathiNumber(info.d15_30)} केस\n• ० ते १५ दिवस: ${toMarathiNumber(info.d0_15)} केस\n\nकृपया सदर प्रकरणांचा त्वरित निपटारा करावा. तरी आपणास नम्र विनंती आहे की, कृपया प्रलंबित प्रकरणांचा आढावा घेऊन त्यांचा शक्य तितक्या लवकर निपटारा करण्यासाठी आवश्यक कार्यवाही करावी.आपल्या सहकार्याबद्दल मनःपूर्वक धन्यवाद.\n\nआदेशानुसार\nमा. जिल्हा अधीक्षक भूमिअभिलेख, अमरावती.`;
                     let encodedMsg = encodeURIComponent(msg);
                     let waUrl = mob ? `https://web.whatsapp.com/send?phone=+91${mob}&text=${encodedMsg}` : '';
 
@@ -408,6 +420,8 @@
                         <td><b>${info.name}</b> <span class="role-badge">${info.role}</span></td>
                         <td>${info.taluka}</td>
                         <td><b>${toMarathiNumber(info.total)}</b></td>
+                        <td>${toMarathiNumber(info.d0_15)}</td>
+                        <td>${toMarathiNumber(info.d15_30)}</td>
                         <td>${toMarathiNumber(info.d30_60)}</td>
                         <td>${toMarathiNumber(info.d60_90)}</td>
                         <td>${toMarathiNumber(info.d90_180)}</td>
@@ -419,7 +433,7 @@
                 }
 
                 document.getElementById('surveyorCount').innerText = "एकूण अधिकारी/कर्मचारी: " + toMarathiNumber(sCount);
-                document.getElementById('tableBody').innerHTML = tbody || '<tr><td colspan="10">कोणताही डेटा आढळला नाही.</td></tr>';
+                document.getElementById('tableBody').innerHTML = tbody || '<tr><td colspan="12">कोणताही डेटा आढळला नाही.</td></tr>';
                 
                 if(sCount > 0) {
                     document.getElementById('btnSelectedWa').style.display = "inline-block";
